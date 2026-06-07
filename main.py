@@ -24,15 +24,24 @@ async def handle_index(request):
         return web.Response(text=f"Ошибка загрузки шаблона: {e}", status=500)
 
 async def handle_api_family(request):
-    user_id = request.query.get("user_id")
-    if not user_id:
-        return web.json_response({"error": "No user_id provided"}, status=400)
-    
-    family_data = db.get_family_structure(int(user_id))
-    if not family_data:
-        return web.json_response({"error": "User not found"}, status=404)
+    """Отдает структуру семьи в формате JSON для JavaScript"""
+    try:
+        user_id_raw = request.query.get("user_id")
+        if not user_id_raw:
+            return web.json_response({"error": "No user_id provided"}, status=400)
         
-    return web.json_response(family_data)
+        # Принудительно переводим ID в чистый int для корректного поиска в БД
+        user_id = int(str(user_id_raw).strip())
+        
+        family_data = db.get_family_structure(user_id)
+        if not family_data:
+            print(f"⚠️ Пользователь {user_id} не найден в базе данных family_tree.db")
+            return web.json_response({"error": f"User {user_id} not found in DB"}, status=404)
+            
+        return web.json_response(family_data)
+    except Exception as e:
+        print(f"🛑 Ошибка в handle_api_family: {e}")
+        return web.json_response({"error": str(e)}, status=500)
 
 def make_app():
     app = web.Application()
@@ -245,7 +254,7 @@ async def run_server():
 async def main():
     db.init_db()
     
-    # Запускаем сервер асинхронно в фоне (он не будет тормозить бота!)
+    # Запуск веб-сервера в фоне
     asyncio.create_task(run_server())
     
     print(" Бот Семейное Древо слушает команды в Телеграм...")
