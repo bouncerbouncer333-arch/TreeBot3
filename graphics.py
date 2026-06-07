@@ -33,14 +33,17 @@ def generate_certificate(cert_type, name1, name2):
 
     text_color = (26, 16, 10) 
 
-    # Меняем русскую "и" на универсальный знак " & ", чтобы убрать баг с конвертом
-    text_line = f"@{name1}   &   @{name2}"
-
     if cert_type == "marriage":
+        # === ТОЧНЫЕ КООРДИНАТЫ И СИМВОЛ ДЛЯ БРАКА ===
+        text_line = f"@{name1}  ❤  @{name2}"
+        
         draw.text((center_x, 420), text_line, fill=text_color, anchor="mm", font=font_names)
         draw.text((int(width * 0.78), 922), current_date, fill=text_color, anchor="rm", font=font_date)
         
     elif cert_type == "divorced":
+        # === ТОЧНЫЕ КООРДИНАТЫ И СИМВОЛ ДЛЯ РАЗВОДА ===
+        text_line = f"@{name1}  💔  @{name2}"
+        
         draw.text((center_x, 420), text_line, fill=text_color, anchor="mm", font=font_names)
         draw.text((int(width * 0.78), 922), current_date, fill=text_color, anchor="rm", font=font_date)
     
