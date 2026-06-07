@@ -58,7 +58,6 @@
         .username { font-size: 14px; font-weight: 500; }
         .role { font-size: 11px; color: #eaeaea; margin-top: 2px; opacity: 0.7; }
         
-        /* Простые соединительные линии через CSS */
         .row::before {
             content: '';
             position: absolute;
@@ -75,56 +74,70 @@
 <body>
 
     <h2>🌳 Генеалогическое Древо</h2>
-    <div class="tree-container" id="tree">
-        </div>
+    <div class="tree-container" id="tree"></div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.ready();
         tg.expand();
 
-        // Запрашиваем данные у нашего бота
-        const userId = tg.initDataUnsafe.user ? tg.initDataUnsafe.user.id : 123456; // Заглушка для теста
+        // Получаем ID пользователя из Telegram
+        const userId = tg.initDataUnsafe.user ? tg.initDataUnsafe.user.id : null;
 
-        fetch(`/api/family?user_id=${userId}`)
-            .then(res => res.json())
-            .then(data => {
-                if (!data) return;
-                const tree = document.getElementById('tree');
-                
-                // 1. Уровень родителей
-                if (data.parents && data.parents.length > 0) {
-                    const pRow = document.createElement('div');
-                    pRow.className = 'row';
-                    data.parents.forEach(p => {
-                        pRow.innerHTML += `<div class="node"><div class="avatar">${p.username[1].toUpperCase()}</div><div class="username">@${p.username}</div><div class="role">Родитель</div></div>`;
-                    });
-                    tree.appendChild(pRow);
-                }
+        if (!userId) {
+            document.getElementById('tree').innerHTML = "<p style='color: #ff453a;'>Ошибка: Не удалось получить данные пользователя Telegram.</p>";
+        } else {
+            // Определяем адрес сервера (работает и на localhost, и на Railway)
+            const baseUrl = window.location.origin;
 
-                // 2. Уровень Главного героя и Супруга
-                const mainRow = document.createElement('div');
-                mainRow.className = 'row';
-                
-                // Сам юзер
-                mainRow.innerHTML += `<div class="node main"><div class="avatar">${data.user.username[1].toUpperCase()}</div><div class="username">@${data.user.username}</div><div class="role">Вы</div></div>`;
-                
-                // Супруг(а)
-                if (data.spouse) {
-                    mainRow.innerHTML += `<div class="node spouse"><div class="avatar">${data.spouse.username[1].toUpperCase()}</div><div class="username">@${data.spouse.username}</div><div class="role">Супруг(а)</div></div>`;
-                }
-                tree.appendChild(mainRow);
+            fetch(`${baseUrl}/api/family?user_id=${userId}`)
+                .then(res => {
+                    if (!res.ok) throw new Error('Ошибка сети или пользователь не найден');
+                    return res.json();
+                })
+                .then(data => {
+                    const tree = document.getElementById('tree');
+                    tree.innerHTML = ""; // Очищаем контейнер
 
-                // 3. Уровень детей
-                if (data.children && data.children.length > 0) {
-                    const cRow = document.createElement('div');
-                    cRow.className = 'row children-row';
-                    data.children.forEach(c => {
-                        cRow.innerHTML += `<div class="node"><div class="avatar">${c.username[1].toUpperCase()}</div><div class="username">@${c.username}</div><div class="role">Ребенок</div></div>`;
-                    });
-                    tree.appendChild(cRow);
-                }
-            });
+                    // 1. Уровень родителей
+                    if (data.parents && data.parents.length > 0) {
+                        const pRow = document.createElement('div');
+                        pRow.className = 'row';
+                        data.parents.forEach(p => {
+                            const letter = p.username ? p.username[0].toUpperCase() : '👤';
+                            pRow.innerHTML += `<div class="node"><div class="avatar">${letter}</div><div class="username">@${p.username || 'id' + p.id}</div><div class="role">Родитель</div></div>`;
+                        });
+                        tree.appendChild(pRow);
+                    }
+
+                    // 2. Уровень Главного героя и Супруга
+                    const mainRow = document.createElement('div');
+                    mainRow.className = 'row';
+                    
+                    const myLetter = data.user.username ? data.user.username[0].toUpperCase() : '👤';
+                    mainRow.innerHTML += `<div class="node main"><div class="avatar">${myLetter}</div><div class="username">@${data.user.username || 'Вы'}</div><div class="role">Вы</div></div>`;
+                    
+                    if (data.spouse) {
+                        const sLetter = data.spouse.username ? data.spouse.username[0].toUpperCase() : '👤';
+                        mainRow.innerHTML += `<div class="node spouse"><div class="avatar">${sLetter}</div><div class="username">@${data.spouse.username}</div><div class="role">Супруг(а)</div></div>`;
+                    }
+                    tree.appendChild(mainRow);
+
+                    // 3. Уровень детей
+                    if (data.children && data.children.length > 0) {
+                        const cRow = document.createElement('div');
+                        cRow.className = 'row children-row';
+                        data.children.forEach(c => {
+                            const cLetter = c.username ? c.username[0].toUpperCase() : '👤';
+                            cRow.innerHTML += `<div class="node"><div class="avatar">${cLetter}</div><div class="username">@${c.username}</div><div class="role">Ребенок</div></div>`;
+                        });
+                        tree.appendChild(cRow);
+                    }
+                })
+                .catch(err => {
+                    document.getElementById('tree').innerHTML = `<p style='color: #ffaa00;'>База данных пуста или пользователя нет в системе.<br>Попробуйте написать сначала /profile в боте.</p>`;
+                });
+        }
     </script>
 </body>
 </html>
