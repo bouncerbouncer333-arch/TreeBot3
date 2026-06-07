@@ -208,3 +208,48 @@ async def process_callbacks(callback_query: types.CallbackQuery):
             return
         if action == 'adoptacc':
             db.adopt_child(p_id, c_id)
+            parent_data = db.get_user(p_id)
+            if parent_data[3] == 'married':
+                db.adopt_child(parent_data[2], c_id)
+            u1, u2 = parent_data[1], db.get_user(c_id)[1]
+            await callback_query.message.delete()
+            await callback_query.message.answer(f"👶 Официально! @{u2} теперь в семье у @{u1}! 🎉")
+        else:
+            await callback_query.message.edit_text("❌ Усыновление отклонено.")
+
+    elif action in ['abacc', 'abdec']:
+        p_id, s_id, c_id = int(data[1]), int(data[2]), int(data[3])
+        if callback_query.from_user.id != s_id:
+            await callback_query.answer("Голосовать должен супруг(а)!", show_alert=True)
+            return
+        if action == 'abacc':
+            db.remove_child(p_id, c_id)
+            db.remove_child(s_id, c_id)
+            u1, u2 = db.get_user(p_id)[1], db.get_user(c_id)[1]
+            await callback_query.message.delete()
+            await callback_query.message.answer(f"📉 По обоюдному согласию родителей, @{u2} был исключен из семьи.")
+        else:
+            await callback_query.message.edit_text("❌ Второй родитель против. Отказ от ребенка отменен.")
+    await callback_query.answer()
+
+# --- ПАРАЛЛЕЛЬНЫЙ ЗАПУСК БЕЗ БЛОКИРОВОК ---
+
+async def run_server():
+    app = make_app()
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, '0.0.0.0', PORT)
+    await site.start()
+    print(f" Web-сервер успешно слушает порт {PORT}")
+
+async def main():
+    db.init_db()
+    
+    # Запускаем сервер асинхронно в фоне (он не будет тормозить бота!)
+    asyncio.create_task(run_server())
+    
+    print(" Бот Семейное Древо слушает команды в Телеграм...")
+    await dp.start_polling(bot)
+
+if __name__ == "__main__":
+    asyncio.run(main())
