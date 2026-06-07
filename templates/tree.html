@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Семейное Древо</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1c1c1e;
+            color: #ffffff;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h2 { color: #f2f2f7; margin-bottom: 30px; }
+        .tree-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 40px;
+            position: relative;
+        }
+        .row {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            position: relative;
+        }
+        .node {
+            background: #2c2c2e;
+            border: 2px solid #3a3a3c;
+            border-radius: 12px;
+            padding: 10px 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 100px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .node.main { border-color: #ff453a; background: #3a1c1c; }
+        .node.spouse { border-color: #30d158; background: #1c3a23; }
+        .avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: #48484a;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .username { font-size: 14px; font-weight: 500; }
+        .role { font-size: 11px; color: #eaeaea; margin-top: 2px; opacity: 0.7; }
+        
+        /* Простые соединительные линии через CSS */
+        .row::before {
+            content: '';
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            width: 2px;
+            height: 20px;
+            background: #48484a;
+            display: none;
+        }
+        .children-row::before { display: block; }
+    </style>
+</head>
+<body>
+
+    <h2>🌳 Генеалогическое Древо</h2>
+    <div class="tree-container" id="tree">
+        </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+
+        // Запрашиваем данные у нашего бота
+        const userId = tg.initDataUnsafe.user ? tg.initDataUnsafe.user.id : 123456; // Заглушка для теста
+
+        fetch(`/api/family?user_id=${userId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (!data) return;
+                const tree = document.getElementById('tree');
+                
+                // 1. Уровень родителей
+                if (data.parents && data.parents.length > 0) {
+                    const pRow = document.createElement('div');
+                    pRow.className = 'row';
+                    data.parents.forEach(p => {
+                        pRow.innerHTML += `<div class="node"><div class="avatar">${p.username[1].toUpperCase()}</div><div class="username">@${p.username}</div><div class="role">Родитель</div></div>`;
+                    });
+                    tree.appendChild(pRow);
+                }
+
+                // 2. Уровень Главного героя и Супруга
+                const mainRow = document.createElement('div');
+                mainRow.className = 'row';
+                
+                // Сам юзер
+                mainRow.innerHTML += `<div class="node main"><div class="avatar">${data.user.username[1].toUpperCase()}</div><div class="username">@${data.user.username}</div><div class="role">Вы</div></div>`;
+                
+                // Супруг(а)
+                if (data.spouse) {
+                    mainRow.innerHTML += `<div class="node spouse"><div class="avatar">${data.spouse.username[1].toUpperCase()}</div><div class="username">@${data.spouse.username}</div><div class="role">Супруг(а)</div></div>`;
+                }
+                tree.appendChild(mainRow);
+
+                // 3. Уровень детей
+                if (data.children && data.children.length > 0) {
+                    const cRow = document.createElement('div');
+                    cRow.className = 'row children-row';
+                    data.children.forEach(c => {
+                        cRow.innerHTML += `<div class="node"><div class="avatar">${c.username[1].toUpperCase()}</div><div class="username">@${c.username}</div><div class="role">Ребенок</div></div>`;
+                    });
+                    tree.appendChild(cRow);
+                }
+            });
+    </script>
+</body>
+</html>
