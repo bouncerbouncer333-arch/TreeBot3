@@ -69,35 +69,38 @@
             display: none;
         }
         .children-row::before { display: block; }
+        .error-box { background: #3a231c; border: 1px solid #ff453a; padding: 15px; border-radius: 10px; font-size: 14px; text-align: center; }
     </style>
 </head>
 <body>
 
     <h2>🌳 Генеалогическое Древо</h2>
-    <div class="tree-container" id="tree"></div>
+    <div class="tree-container" id="tree">Загрузка данных...</div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.ready();
         tg.expand();
 
-        // Получаем ID пользователя из Telegram
+        // Достаем ID пользователя напрямую из Telegram WebApp API
         const userId = tg.initDataUnsafe.user ? tg.initDataUnsafe.user.id : null;
 
         if (!userId) {
-            document.getElementById('tree').innerHTML = "<p style='color: #ff453a;'>Ошибка: Не удалось получить данные пользователя Telegram.</p>";
+            document.getElementById('tree').innerHTML = "<div class='error-box'>❌ Ошибка: Telegram не передал ваш ID пользователя. Откройте приложение внутри чата.</div>";
         } else {
-            // Определяем адрес сервера (работает и на localhost, и на Railway)
             const baseUrl = window.location.origin;
 
             fetch(`${baseUrl}/api/family?user_id=${userId}`)
-                .then(res => {
-                    if (!res.ok) throw new Error('Ошибка сети или пользователь не найден');
+                .then(async res => {
+                    if (!res.ok) {
+                        const errorData = await res.json().catch(() => ({}));
+                        throw new Error(errorData.error || `Ошибка сервера (${res.status})`);
+                    }
                     return res.json();
                 })
                 .then(data => {
                     const tree = document.getElementById('tree');
-                    tree.innerHTML = ""; // Очищаем контейнер
+                    tree.innerHTML = ""; 
 
                     // 1. Уровень родителей
                     if (data.parents && data.parents.length > 0) {
@@ -135,9 +138,4 @@
                     }
                 })
                 .catch(err => {
-                    document.getElementById('tree').innerHTML = `<p style='color: #ffaa00;'>База данных пуста или пользователя нет в системе.<br>Попробуйте написать сначала /profile в боте.</p>`;
-                });
-        }
-    </script>
-</body>
-</html>
+                    document.getElementById('
